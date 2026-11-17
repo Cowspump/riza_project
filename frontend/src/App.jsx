@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, NavLink, Route, Routes, useNavigate, useParams } from 'react-router-dom'
 import { ROLE_HOME, ROLE_LABEL, STEPS, api, clearToken, getToken, setToken, tenge, when } from './api'
+import FortuneWheel from './FortuneWheel'
 
 const AuthContext = createContext(null)
 
@@ -287,6 +288,7 @@ function MenuPage() {
   const [menu, setMenu] = useState([])
   const [cart, setCart] = useState({ items: [], total: 0, count: 0 })
   const [category, setCategory] = useState('Все')
+  const [wheelOpen, setWheelOpen] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -328,6 +330,9 @@ function MenuPage() {
           <div className="section-head">
             <h1>Меню с казана</h1>
             <p>Блюдо попадает в чек справа. Оплата при получении.</p>
+            <button type="button" className="wheel-open" onClick={() => setWheelOpen(true)} disabled={menu.length === 0}>
+              Не можете выбрать? Колесо фортуны
+            </button>
           </div>
           <div className="cats">
             {categories.map((name) => (
@@ -355,6 +360,9 @@ function MenuPage() {
         </section>
         <Slip cart={cart} onQty={setQty} onCheckout={checkout} />
       </div>
+      {wheelOpen && (
+        <FortuneWheel dishes={menu} inCart={inCart} onAdd={add} onClose={() => setWheelOpen(false)} />
+      )}
     </Shell>
   )
 }

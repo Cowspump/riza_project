@@ -9,19 +9,47 @@ MENU = [
     ("Супы", 1, [
         ("Шурпа", "Баранина, нут, редька, зелень", 2200, "broth"),
         ("Лагман", "Тянутая лапша, баранина, перец", 2400, "clay"),
+        ("Мампар", "Домашняя лапша, баранина, картофель, зелень", 2300, "broth"),
+        ("Сорпа", "Крепкий бульон, конина, лук, укроп", 2000, "broth"),
+        ("Нарын-суп", "Конина, тонкая лапша, лук, бульон", 2800, "ember"),
     ]),
-    ("Горячее", 2, [
+    ("Салаты", 2, [
+        ("Ачичук", "Помидор, лук, сладкий перец, зелень", 1300, "ember"),
+        ("Чимчи", "Корейская морковь, огурец, перец, кунжут", 1200, "clay"),
+        ("Салат Ташкент", "Говядина, редька, лук, яйцо, майонез", 1800, "gold"),
+        ("Свежий овощной", "Огурец, помидор, редис, сметана", 1100, "herb"),
+        ("Греческий", "Фета, оливки, огурец, помидор, орегано", 1900, "herb"),
+        ("Цезарь с курицей", "Ромэн, курица, пармезан, сухарики, соус", 2100, "gold"),
+        ("Оливье", "Колбаса, картофель, горошек, огурец, яйцо", 1400, "broth"),
+        ("Салат с баклажанами", "Жареный баклажан, перец, чеснок, кинза", 1700, "ember"),
+        ("Хрустящие баклажаны", "Баклажан, помидор, сладкий соус, кунжут", 1800, "clay"),
+        ("Салат из свёклы", "Запечённая свёкла, грецкий орех, чеснок", 1300, "ember"),
+        ("Фунчоза", "Стеклянная лапша, овощи, говядина, соус", 1900, "broth"),
+        ("Салат с копчёной курицей", "Курица, огурец, кукуруза, яйцо, сыр", 1700, "gold"),
+    ]),
+    ("Горячее", 3, [
         ("Плов чабанский", "Рис девзира, баранина, айва", 2600, "gold"),
         ("Манты", "Четыре штуки, лук, чёрный перец", 2100, "clay"),
         ("Казан-кебаб", "Баранина куском, картофель", 3200, "ember"),
+        ("Бешбармак", "Конина, отварное тесто, лук, бульон", 3500, "broth"),
+        ("Лагман жареный (гуйру)", "Лапша, говядина, овощи, зира", 2500, "clay"),
+        ("Шашлык из баранины", "Мякоть на углях, лук, соус", 2900, "ember"),
+        ("Дымляма", "Баранина, картофель, капуста, морковь", 2700, "gold"),
+        ("Жаркоп", "Тушёная баранина с картофелем и луком", 2800, "clay"),
     ]),
-    ("Выпечка", 3, [
+    ("Выпечка", 4, [
         ("Самса с бараниной", "Слоёное тесто, курдюк, зира", 700, "gold"),
         ("Лепёшка тандыр", "Тёплая, с кунжутом", 400, "clay"),
+        ("Баурсаки", "Пышные, жареные, шесть штук", 800, "gold"),
+        ("Самса с тыквой", "Слоёное тесто, тыква, лук", 600, "gold"),
+        ("Чак-чак", "Тесто, мёд, орехи", 1100, "broth"),
     ]),
-    ("Напитки", 4, [
+    ("Напитки", 5, [
         ("Чай с чабрецом", "Чёрный чай, чабрец, изюм", 600, "herb"),
         ("Айран", "Солёный, холодный", 500, "herb"),
+        ("Кумыс", "Кобылье молоко, прохладный", 900, "broth"),
+        ("Шубат", "Верблюжье молоко, лёгкая кислинка", 1000, "broth"),
+        ("Компот из кураги", "Курага, изюм, яблоко", 500, "gold"),
     ]),
 ]
 
@@ -33,21 +61,29 @@ STAFF = [
 
 
 def seed(db: Session) -> None:
-    if db.scalar(select(Category.id).limit(1)) is None:
-        for name, sort_order, dishes in MENU:
+    # Additive: new categories and dishes appear on existing databases too,
+    # while prices and descriptions already stored are left untouched.
+    for name, sort_order, dishes in MENU:
+        category = db.scalar(select(Category).where(Category.name == name))
+        if category is None:
             category = Category(name=name, sort_order=sort_order)
             db.add(category)
             db.flush()
-            for dish_name, description, price, tone in dishes:
-                db.add(
-                    MenuItem(
-                        category_id=category.id,
-                        name=dish_name,
-                        description=description,
-                        price=price,
-                        tone=tone,
-                    )
+        else:
+            category.sort_order = sort_order
+        known = set(db.scalars(select(MenuItem.name).where(MenuItem.category_id == category.id)).all())
+        for dish_name, description, price, tone in dishes:
+            if dish_name in known:
+                continue
+            db.add(
+                MenuItem(
+                    category_id=category.id,
+                    name=dish_name,
+                    description=description,
+                    price=price,
+                    tone=tone,
                 )
+            )
 
     if settings.seed_demo and db.scalar(select(User.id).where(User.role != "client").limit(1)) is None:
         for email, phone, full_name, role in STAFF:
